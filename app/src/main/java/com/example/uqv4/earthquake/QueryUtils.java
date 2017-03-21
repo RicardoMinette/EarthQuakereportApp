@@ -6,7 +6,11 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 /**
  * Created by uqv4 on 14/03/2017.
@@ -14,9 +18,9 @@ import java.util.ArrayList;
 
 public class QueryUtils {
 
+    private static final String LOG="LogQueryUtils";
+
     //primeiramente é inserido o JSON na forma de string, como se ele fosse obtido por um webservice:
-
-
     private static final String SAMPLE_JSON_RESPONSE=
             "{\"type\":\"FeatureCollection\",\"metadata\":{\"generated\":1462295443000,\"url\":\"http://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime=2016-01-01&endtime=2016-01-31&minmag=6&limit=10\",\"title\":\"USGS Earthquakes\",\"status\":200,\"api\":\"1.5.2\",\"limit\":10,\"offset\":1,\"count\":10},\"features\":[{\"type\":\"Feature\",\"properties\":{\"mag\":7.2,\"place\":\"88km N of Yelizovo, Russia\",\"time\":1454124312220,\"updated\":1460674294040,\"tz\":720,\"url\":\"http://earthquake.usgs.gov/earthquakes/eventpage/us20004vvx\",\"detail\":\"http://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us20004vvx&format=geojson\",\"felt\":2,\"cdi\":3.4,\"mmi\":5.82,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":1,\"sig\":798,\"net\":\"us\",\"code\":\"20004vvx\",\"ids\":\",at00o1qxho,pt16030050,us20004vvx,gcmt20160130032510,\",\"sources\":\",at,pt,us,gcmt,\",\"types\":\",cap,dyfi,finite-fault,general-link,general-text,geoserve,impact-link,impact-text,losspager,moment-tensor,nearby-cities,origin,phase-data,shakemap,tectonic-summary,\",\"nst\":null,\"dmin\":0.958,\"rms\":1.19,\"gap\":17,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 7.2 - 88km N of Yelizovo, Russia\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[158.5463,53.9776,177]},\"id\":\"us20004vvx\"},\n" +
                     "{\"type\":\"Feature\",\"properties\":{\"mag\":6.1,\"place\":\"94km SSE of Taron, Papua New Guinea\",\"time\":1453777820750,\"updated\":1460156775040,\"tz\":600,\"url\":\"http://earthquake.usgs.gov/earthquakes/eventpage/us20004uks\",\"detail\":\"http://earthquake.usgs.gov/fdsnws/event/1/query?eventid=us20004uks&format=geojson\",\"felt\":null,\"cdi\":null,\"mmi\":4.1,\"alert\":\"green\",\"status\":\"reviewed\",\"tsunami\":1,\"sig\":572,\"net\":\"us\",\"code\":\"20004uks\",\"ids\":\",us20004uks,gcmt20160126031023,\",\"sources\":\",us,gcmt,\",\"types\":\",cap,geoserve,losspager,moment-tensor,nearby-cities,origin,phase-data,shakemap,tectonic-summary,\",\"nst\":null,\"dmin\":1.537,\"rms\":0.74,\"gap\":25,\"magType\":\"mww\",\"type\":\"earthquake\",\"title\":\"M 6.1 - 94km SSE of Taron, Papua New Guinea\"},\"geometry\":{\"type\":\"Point\",\"coordinates\":[153.2454,-5.2952,26]},\"id\":\"us20004uks\"},\n" +
@@ -41,7 +45,7 @@ public class QueryUtils {
     // é importante observar que é um método estático, de forma que não é preciso instanciar a Classe.
     // Isto é feito para que os dados dessa classe possam somente ser acessados, sem manipulação dos dados
 
-    public static ArrayList<EarthQuake>extractEarthQuake(){
+    public static ArrayList<EarthQuake> extractEarthQuake(){
         //inicialmente cria-se um ArrayList vazio para que os dados possam ser adicionados a ele.
         ArrayList<EarthQuake>earthQuakes=new ArrayList<>();
 
@@ -61,15 +65,39 @@ public class QueryUtils {
             JSONObject jsonObject=new JSONObject(SAMPLE_JSON_RESPONSE);
             // após passar o String JSON para o JSONObject, é preciso acessar as informações de interesse
             JSONArray features=jsonObject.getJSONArray("features");
+            Log.i(LOG,"The array length is: "+Integer.toString(features.length()));
+
+            // to find to transversal path to the required information, we need to study the JSON file.
+            // after doing that, t is possibl eto see the transversal path for mag, city and date. They are
+            // shown bellow:
+            // mag: root -> JSONAray with key "features"-> Look at first element-> JSONObject with key "Properties"-> get decimal value for key "mag"
+            // city: root -> JSONArray with key "features" -> Look at first element -> JSONObject with key "Properties"-> get String value for key "place"
+            // date: root -> JSONArray with key "features" -> Look at first element -> JSONObject with key "Properties" -> get Date valeu for hey "time"
 
             // construção do loop dentro o array obtido
-            for(int i=0;i<=features.length();i++){
+            for(int i=0;i<=(features.length()-1);i++){
                 // assim que acessados os dados dentro do array, deve-se encontrar a informação
                 // desejada: magnitude, cidade e data
                 JSONObject featuresJSONObject= features.getJSONObject(i);
-                String magAmp = featuresJSONObject.getString("mag");
+                JSONObject properties=featuresJSONObject.getJSONObject("properties");
+                Double magAmp=properties.getDouble("mag");
+                String city=properties.getString("place");
+                long dateI=properties.getLong("time");
 
-                EarthQuake earthQuake=new EarthQuake(magAmp,"dumb 1","dumb 2");
+                //Double magAmp = featuresJSONObject.getDouble("mag");
+                //Log.i(LOG,"The mag value is: "+Double.toString(magAmp));
+                DateFormat df=new SimpleDateFormat("MM,yy");
+                Date date=new Date(dateI);
+                String dateString=df.format(date);
+                //try {
+                 //   date = df.parse(String.valueOf(dateI));
+                 //   dateString=df.format(date);
+                //}catch (ParseException e){
+                 //   Log.e(LOG,"Problema na conversão da data..",e);
+                //}
+
+                //EarthQuake earthQuake=new EarthQuake(Double.toString(magAmp),"dumb 1","dumb 2");
+                earthQuakes.add(new EarthQuake(Double.toString(magAmp),city,dateString));
 
 
                 //features
@@ -80,11 +108,14 @@ public class QueryUtils {
             // a excessão será tratada aqui, no bloco catch, evitando assim o app de travar.
             Log.e("QueryUtils","Problema para passar os resultados do JSON",e);
         }
+        Log.i(LOG,"length of ArrayList: "+Integer.toString(earthQuakes.size()));
 
         return earthQuakes;
 
 
     }
+
+
 
 
 

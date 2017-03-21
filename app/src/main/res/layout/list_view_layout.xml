@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:orientation="horizontal"
     android:layout_height="match_parent">
+    <!-- Now we need to change our layout to macth ith the design of the UI.-->
 
     <TextView
         android:id="@+id/magnitude"
